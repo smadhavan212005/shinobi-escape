@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Shinobi Escape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family:'Exo 2', 'Orbitron', 'Segoe UI', sans-serif;
+    background:#0a0a0a;
+    overflow:hidden;
+    height:100vh;
+    touch-action: none;
+  }
+
+  #wrap {
+    position:fixed;
+    top:0; left:0;
+    width:100vw; height:100vh;
+    background:linear-gradient(180deg, #1a1a2e 0%, #16213e 70%, #0f3460 100%);
+  }
+
+  canvas {
+    position:absolute;
+    top:0; left:0;
+    width:100vw;
+    height:100vh;
+    display:block;
+  }
+
+  .hud {
+    position:absolute;
+    font-family:'Exo 2', sans-serif;
+    color:#fff;
+    pointer-events:none;
+    z-index:10;
+  }
+
+  #story-box {
+    top:15px; left:15px; right:15px;
+    background:rgba(20,20,30,0.9);
+    border:2px solid rgba(255,165,0,0.3);
+    border-radius:8px;
+    padding:14px 18px;
+    max-width:480px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  #mission-title {
+    color:#ffa500;
+    font-size:14px;
+    font-weight:800;
+    margin-bottom:6px;
+    font-family:'Orbitron', sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.8px;
+  }
+
+  #story-desc {
+    color:#d0d0d0;
+    font-size:12px;
+    line-height:1.5;
+    font-weight:400;
+  }
+
+  #score-area {
+    top:15px; right:15px;
+    text-align:right;
+    background:rgba(20,20,30,0.9);
+    border:2px solid rgba(255,165,0,0.3);
+    border-radius:8px;
+    padding:12px 16px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.5);
+    min-width:140px;
+  }
+
+  #score {
+    color:#ffa500;
+    font-size:28px;
+    font-weight:900;
+    font-family:'Orbitron', sans-serif;
+    text-shadow:2px 2px 6px rgba(0,0,0,0.8);
+  }
+
+  #distance {
+    color:#87ceeb;
+    font-size:13px;
+    margin-top:6px;
+    font-weight:600;
+  }
+
+  #danger {
+    color:#ff4444;
+    font-size:11px;
+    margin-top:4px;
+    font-weight:700;
+    animation:blink 1.5s infinite;
+  }
+
+  #highscore {
+    color:#00ff7f;
+    font-size:11px;
+    margin-top:4px;
+    font-weight:600;
+  }
+
+  @keyframes blink { 0%,100% { opacity:0.7; } 50% { opacity:1; } }
+
+  #controls {
+    bottom:25px; left:50%;
+    transform:translateX(-50%);
+    background:rgba(20,20,30,0.9);
+    padding:10px 20px;
+    border-radius:24px;
+    font-size:13px;
+    color:#ddd;
+    transition:opacity 0.3s;
+    font-weight:600;
+    border:2px solid rgba(255,165,0,0.2);
+    box-shadow:0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  .feedback {
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    font-weight:800;
+    font-size:22px;
+    opacity:0;
+    transition:all 0.4s;
+    pointer-events:none;
+    z-index:20;
+    text-shadow:2px 2px 6px rgba(0,0,0,0.9);
+    font-family:'Orbitron', sans-serif;
+  }
+
+  #perfect { color:#ff4500; }
+  #stealth { color:#00ff7f; top:calc(50% + 40px); }
+  #alert { color:#ff4444; top:calc(50% + 80px); }
+
+  #retry {
+    position:absolute;
+    bottom:80px; left:50%;
+    transform:translateX(-50%);
+    background:#cc3333;
+    color:#fff;
+    border:none;
+    padding:14px 32px;
+    border-radius:8px;
+    font-size:16px;
+    font-weight:700;
+    font-family:'Orbitron', sans-serif;
+    cursor:pointer;
+    display:none;
+    z-index:30;
+    box-shadow:0 4px 12px rgba(0,0,0,0.6);
+    transition:background 0.3s, transform 0.2s;
+  }
+
+  #retry:hover { background:#aa2222; transform:translateX(-50%) scale(1.05); }
+  #retry:active { transform:translateX(-50%) scale(0.98); }
+
+  .cutscene {
+    position:fixed;
+    top:0; left:0;
+    width:100vw; height:100vh;
+    background:rgba(0,0,0,0.95);
+    display:none;
+    z-index:100;
+    color:#fff;
+  }
+
+  .cutscene-content {
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    max-width:600px;
+    padding:30px 20px;
+    width:90%;
+  }
+
+  .cutscene h2 {
+    color:#ffa500;
+    font-size:32px;
+    margin-bottom:20px;
+    text-shadow:2px 2px 6px rgba(0,0,0,0.8);
+    font-family:'Orbitron', sans-serif;
+    font-weight:900;
+  }
+
+  .cutscene p {
+    font-size:17px;
+    line-height:1.6;
+    margin:12px 0;
+    color:#ddd;
+    font-family:'Exo 2', sans-serif;
+    font-weight:400;
+  }
+
+  .cutscene ul {
+    text-align:left;
+    display:inline-block;
+    margin:18px 0;
+    list-style-position:inside;
+  }
+
+  .cutscene li {
+    margin:10px 0;
+    color:#ccc;
+    font-family:'Exo 2', sans-serif;
+    font-size:15px;
+  }
+
+  .start-btn {
+    background:#2e86de;
+    color:#fff;
+    border:none;
+    padding:14px 32px;
+    border-radius:8px;
+    font-size:17px;
+    font-weight:700;
+    font-family:'Orbitron', sans-serif;
+    cursor:pointer;
+    margin:20px 10px;
+    transition:background 0.3s, transform 0.2s;
+    box-shadow:0 4px 12px rgba(0,0,0,0.6);
+  }
+
+  .start-btn:hover { background:#2475d0; transform:scale(1.05); }
+  .start-btn:active { transform:scale(0.98); }
+
+  @media (max-width:768px) {
+    #story-box {
+      left:10px; right:10px; top:10px;
+      padding:10px 14px;
+      max-width:100%;
+    }
+    #mission-title { font-size:12px; }
+    #story-desc { font-size:11px; }
+    #score-area {
+      top:10px; right:10px;
+      padding:10px 12px;
+      min-width:120px;
+    }
+    #score { font-size:24px; }
+    #distance { font-size:11px; }
+    #danger { font-size:10px; }
+    #highscore { font-size:10px; }
+    #controls {
+      bottom:15px;
+      font-size:11px;
+      padding:8px 16px;
+      max-width:90%;
+      text-align:center;
+    }
+    .feedback { font-size:18px; }
+    #retry {
+      bottom:60px;
+      padding:12px 24px;
+      font-size:14px;
+    }
+    .cutscene-content {
+      padding:20px 15px;
+      width:95%;
+    }
+    .cutscene h2 { font-size:26px; }
+    .cutscene p { font-size:15px; }
+    .cutscene li { font-size:13px; }
+    .start-btn {
+      padding:12px 24px;
+      font-size:15px;
+      margin:15px 5px;
+    }
+  }
+
+  @media (max-width:480px) {
+    #story-box { padding:8px 12px; }
+    #mission-title { font-size:11px; }
+    #story-desc { font-size:10px; }
+    #score-area { padding:8px 10px; min-width:100px; }
+    #score { font-size:20px; }
+    #controls { font-size:10px; padding:6px 12px; }
+    .cutscene h2 { font-size:22px; }
+    .cutscene p { font-size:14px; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <div id="story-box" class="hud">
+    <div id="mission-title">Mission: ESCAPE THE SAMURAI FORTRESS</div>
+    <div id="story-desc">You are Kage, a shadow ninja. The Shogun's army has discovered your secret mission. Use your bamboo pole technique to escape across the fortress rooftops before dawn breaks!</div>
+  </div>
+
+  <div id="score-area" class="hud">
+    <div id="score">0</div>
+    <div id="distance">0m fled</div>
+    <div id="danger">PURSUIT: CLOSE</div>
+    <div id="highscore">Best: 0</div>
+  </div>
+
+  <div id="controls" class="hud">Hold MOUSE/TOUCH or SPACEBAR to extend bamboo pole</div>
+
+  <div id="perfect" class="feedback">PERFECT STEALTH! +2</div>
+  <div id="stealth" class="feedback">SILENT LANDING +1</div>
+  <div id="alert" class="feedback">GUARDS ALERTED!</div>
+
+  <button id="retry">RETRY ESCAPE</button>
+
+  <div id="intro-cutscene" class="cutscene">
+    <div class="cutscene-content">
+      <h2>Shinobi Escape: The Last Dawn</h2>
+      <p><strong>Ancient Japan, 1603...</strong></p>
+      <p>You are the last shinobi of a fallen clan. The Shogun's guards are closing in.</p>
+      <p>Run across the rooftops, outsmart the guards, and uncover the hidden truth of your clan.</p>
+      <p><strong>Use MOUSE/TOUCH or SPACEBAR to extend your bamboo pole and escape!</strong></p>
+      <button class="start-btn" onclick="startMission()">Begin Escape</button>
+    </div>
+  </div>
+
+  <div id="caught-cutscene" class="cutscene">
+    <div class="cutscene-content">
+      <h2>Captured!</h2>
+      <p>The guards have caught up to you! You fall into the courtyard below...</p>
+      <p><strong>"This cannot be the end of my clan's legacy!"</strong></p>
+      <p>Your training has prepared you for this. Try the escape again, and remember:</p>
+      <ul>
+        <li>Perfect landings keep you silent</li>
+        <li>Use MOUSE, TOUCH, or SPACEBAR to control your pole</li>
+        <li>The guards get faster as dawn approaches</li>
+      </ul>
+      <button class="start-btn" onclick="retryMission()">Escape Again</button>
+    </div>
+  </div>
+
+  <div id="milestone-cutscene" class="cutscene">
+    <div class="cutscene-content">
+      <h2>Chapter Complete!</h2>
+      <div id="milestone-text"></div>
+      <button class="start-btn" onclick="continueMission()">Continue Escape</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MISSIONS = {
+  0: { title: "ESCAPE THE INNER COURTYARD", desc: "Samurai guards patrol below. Move silently across the first rooftops." },
+  10: { title: "CROSS THE TEMPLE GROUNDS", desc: "Alert level rising! The temple monks have joined the search." },
+  25: { title: "NAVIGATE THE MARKET DISTRICT", desc: "Townspeople are waking up. Maintain stealth through the crowded rooftops." },
+  50: { title: "REACH THE OUTER WALLS", desc: "You can see the mountains! But the chase is intensifying..." },
+  75: { title: "THE FINAL SPRINT", desc: "Dawn is breaking! Sprint across the last rooftops to freedom!" }
+};
+
+const PLATFORM_H = 120;
+const HERO_W = 22, HERO_H = 34;
+const HERO_EDGE_DIST = 12;
+const PERFECT_SIZE = 15;
+const STRETCH_RATE = 0.35;
+const ROTATE_RATE = 0.18;
+const WALK_RATE = 0.3;
+const TRANSITION_SPEED = 0.4;
+const FALL_SPEED = 0.5;
+const BG_SPEED = 0.12;
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const distanceEl = document.getElementById('distance');
+const dangerEl = document.getElementById('danger');
+const highscoreEl = document.getElementById('highscore');
+const missionEl = document.getElementById('mission-title');
+const storyEl = document.getElementById('story-desc');
+const controlsEl = document.getElementById('controls');
+const perfectEl = document.getElementById('perfect');
+const stealthEl = document.getElementById('stealth');
+const alertEl = document.getElementById('alert');
+const retryBtn = document.getElementById('retry');
+
+let W, H;
+let phase = 'story';
+let lastTs = 0;
+let sceneOffset = 0;
+let heroX = 0, heroY = 0;
+let score = 0;
+let distance = 0;
+let stealthLevel = 100;
+let pursuitLevel = 0;
+let currentChapter = 0;
+let highScore = 0;
+
+let platforms = [];
+let sticks = [];
+let trees = [];
+let guards = [];
+let lanterns = [];
+
+let spacePressed = false;
+let mousePressed = false;
+
+function resizeCanvas() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+}
+
+function loadHighScore() {
+  const saved = localStorage.getItem('shinobi_highscore');
+  highScore = saved ? parseInt(saved) : 0;
+  highscoreEl.textContent = `Best: ${highScore}`;
+}
+
+function saveHighScore() {
+  if(score > highScore) {
+    highScore = score;
+    localStorage.setItem('shinobi_highscore', highScore.toString());
+    highscoreEl.textContent = `Best: ${highScore}`;
+  }
+}
+
+function startMission() {
+  document.getElementById('intro-cutscene').style.display = 'none';
+  reset();
+}
+
+function retryMission() {
+  document.getElementById('caught-cutscene').style.display = 'none';
+  reset();
+}
+
+function continueMission() {
+  document.getElementById('milestone-cutscene').style.display = 'none';
+  phase = 'waiting';
+}
+
+function updateStory() {
+  for (let milestone in MISSIONS) {
+    if (score >= parseInt(milestone) && currentChapter < parseInt(milestone)) {
+      currentChapter = parseInt(milestone);
+      const mission = MISSIONS[milestone];
+      missionEl.textContent = `Mission: ${mission.title}`;
+      storyEl.textContent = mission.desc;
+
+      if (milestone > 0 && score > 0) {
+        const milestoneText = document.getElementById('milestone-text');
+        milestoneText.innerHTML = `<p><strong>${mission.title}</strong></p><p>${mission.desc}</p><p>Distance escaped: ${distance}m | Stealth: ${Math.floor(stealthLevel)}%</p>`;
+        document.getElementById('milestone-cutscene').style.display = 'block';
+        phase = 'story';
+      }
+      break;
+    }
+  }
+
+  pursuitLevel = Math.min(100, score * 2 + (100 - stealthLevel));
+  distanceEl.textContent = `${distance}m fled`;
+
+  const dangerLevels = ['DISTANT', 'CLOSE', 'VERY CLOSE', 'CRITICAL!'];
+  const dangerIndex = Math.floor(pursuitLevel / 25);
+  dangerEl.textContent = `PURSUIT: ${dangerLevels[Math.min(dangerIndex, 3)]}`;
+  dangerEl.style.color = pursuitLevel > 75 ? '#ff4444' : pursuitLevel > 50 ? '#ffaa00' : '#00ff7f';
+}
+
+function last(arr) { return arr[arr.length-1]; }
+function rand(a,b) { return a + Math.floor(Math.random()*(b-a+1)); }
+
+function reset() {
+  phase = 'waiting';
+  lastTs = 0;
+  sceneOffset = 0;
+  score = 0;
+  distance = 0;
+  stealthLevel = 100;
+  pursuitLevel = 0;
+  currentChapter = 0;
+
+  scoreEl.textContent = score;
+  controlsEl.style.opacity = 1;
+  perfectEl.style.opacity = 0;
+  stealthEl.style.opacity = 0;
+  alertEl.style.opacity = 0;
+  retryBtn.style.display = 'none';
+
+  platforms = [{x:50, w:70}];
+  for(let i=0; i<6; i++) genPlatform();
+  sticks = [{ x: platforms[0].x + platforms[0].w, length:0, rot:0 }];
+
+  trees = [];
+  for(let i=0; i<10; i++) genTree();
+  guards = [];
+  for(let i=0; i<5; i++) genGuard();
+  lanterns = [];
+  for(let i=0; i<8; i++) genLantern();
+
+  heroX = platforms[0].x + platforms[0].w - HERO_EDGE_DIST;
+  heroY = 0;
+
+  updateStory();
+  draw();
+}
+
+function genPlatform() {
+  const lastp = platforms[platforms.length-1];
+  const gap = rand(60, 160 + Math.min(score*3, 80));
+  const w = rand(35, 85);
+  platforms.push({ x: lastp.x + lastp.w + gap, w });
+}
+
+function genTree() {
+  const lastT = trees.length ? trees[trees.length-1].x : 0;
+  const gap = rand(40,130);
+  trees.push({
+    x: lastT + gap,
+    type: Math.random() > 0.5 ? 'bamboo' : 'cherry',
+    height: rand(30,45),
+    sway: Math.random() * Math.PI * 2
+  });
+}
+
+function genGuard() {
+  const lastG = guards.length ? guards[guards.length-1].x : 200;
+  const gap = rand(150,300);
+  guards.push({
+    x: lastG + gap,
+    y: H - 100,
+    radius: rand(80,120),
+    patrol: Math.random() > 0.5
+  });
+}
+
+function genLantern() {
+  const lastL = lanterns.length ? lanterns[lanterns.length-1].x : 100;
+  const gap = rand(80,150);
+  lanterns.push({
+    x: lastL + gap,
+    y: rand(H-200, H-120),
+    flicker: Math.random() * Math.PI * 2
+  });
+}
+
+function startStretch(e) {
+  if(phase !== 'waiting') return;
+  controlsEl.style.opacity = 0;
+  phase = 'stretching';
+  lastTs = undefined;
+  requestAnimationFrame(loop);
+}
+
+function stopStretch(e) {
+  if(phase === 'stretching') phase = 'turning';
+}
+
+window.addEventListener('mousedown', (e) => {
+  mousePressed = true;
+  startStretch(e);
+});
+
+window.addEventListener('mouseup', (e) => {
+  mousePressed = false;
+  stopStretch(e);
+});
+
+window.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  startStretch(e);
+}, {passive:false});
+
+window.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  stopStretch(e);
+}, {passive:false});
+
+window.addEventListener('keydown', (e) => {
+  if(e.code === 'Space' || e.key === ' ') {
+    e.preventDefault();
+    if(!spacePressed && phase === 'waiting') {
+      spacePressed = true;
+      startStretch(e);
+    }
+  }
+  if(e.key === 'Enter' || e.key === 'r' || e.key === 'R') {
+    e.preventDefault();
+    reset();
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if(e.code === 'Space' || e.key === ' ') {
+    e.preventDefault();
+    if(spacePressed) {
+      spacePressed = false;
+      stopStretch(e);
+    }
+  }
+});
+
+retryBtn.addEventListener('click', () => reset());
+
+function loop(ts) {
+  if(!lastTs) lastTs = ts;
+  const dt = ts - lastTs;
+
+  switch(phase) {
+    case 'story':
+    case 'waiting':
+      draw(); lastTs = ts; return;
+    case 'stretching':
+      last(sticks).length += dt * STRETCH_RATE * (1 + pursuitLevel * 0.001);
+      break;
+    case 'turning':
+      last(sticks).rot += dt * ROTATE_RATE;
+      if(last(sticks).rot >= 90) {
+        last(sticks).rot = 90;
+        const [p, perfect] = checkHit();
+        if(p) {
+          distance += Math.floor(last(sticks).length / 10);
+          if(perfect) {
+            score += 2;
+            stealthLevel = Math.min(100, stealthLevel + 5);
+            showFeedback(perfectEl);
+          } else {
+            score += 1;
+            stealthLevel = Math.max(0, stealthLevel - 2);
+            if(stealthLevel > 70) showFeedback(stealthEl);
+          }
+          scoreEl.textContent = score;
+          genPlatform(); genTree(); genGuard();
+          if(Math.random() < 0.4) genLantern();
+          phase = 'walking';
+        } else {
+          stealthLevel = Math.max(0, stealthLevel - 15);
+          showFeedback(alertEl);
+          phase = 'falling';
+        }
+        updateStory();
+      }
+      break;
+    case 'walking':
+      heroX += dt * WALK_RATE * (1 + pursuitLevel * 0.002);
+      const [nextP] = checkHit();
+      if(nextP) {
+        const maxHeroX = nextP.x + nextP.w - HERO_EDGE_DIST;
+        if(heroX >= maxHeroX) {
+          heroX = maxHeroX;
+          phase = 'transitioning';
+        }
+      } else {
+        const maxHeroX = last(sticks).x + last(sticks).length + HERO_W;
+        if(heroX >= maxHeroX) { heroX = maxHeroX; phase = 'falling'; }
+      }
+      break;
+    case 'transitioning':
+      sceneOffset += dt * TRANSITION_SPEED * (1 + score * 0.001);
+      const [nxt] = checkHit();
+      if(nxt && sceneOffset > nxt.x + nxt.w - (W/2 - 60)) {
+        sticks.push({ x: nxt.x + nxt.w, length:0, rot:0 });
+        platforms = platforms.filter(p => p.x + p.w > sceneOffset - 100);
+        phase = 'waiting';
+      }
+      break;
+    case 'falling':
+      if(last(sticks).rot < 180) last(sticks).rot += dt * ROTATE_RATE;
+      heroY += dt * FALL_SPEED * (1 + heroY * 0.001);
+      if(heroY > PLATFORM_H + 250) {
+        saveHighScore();
+        document.getElementById('caught-cutscene').style.display = 'block';
+        return;
+      }
+      break;
+  }
+
+  draw();
+  lastTs = ts;
+  requestAnimationFrame(loop);
+}
+
+function showFeedback(el) {
+  el.style.opacity = 1;
+  setTimeout(() => el.style.opacity = 0, 800);
+}
+
+function checkHit() {
+  if(Math.round(last(sticks).rot) !== 90) return [undefined,false];
+  const far = last(sticks).x + last(sticks).length;
+  const p = platforms.find(pl => pl.x < far && far < pl.x + pl.w);
+  if(!p) return [undefined,false];
+  const center = p.x + p.w/2;
+  const perfect = (center - PERFECT_SIZE/2) < far && far < (center + PERFECT_SIZE/2);
+  return [p, perfect];
+}
+
+function draw() {
+  ctx.clearRect(0,0,W,H);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#1a1a2e');
+  grad.addColorStop(0.7, '#16213e');
+  grad.addColorStop(1, '#0f3460');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  for(let i=0; i<50; i++) {
+    const x = (i * 37) % W;
+    const y = (i * 23) % (H/2);
+    const size = (i % 3) + 1;
+    ctx.fillRect(x, y, size, size);
+  }
+
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = '#f4d03f';
+  ctx.beginPath();
+  ctx.arc(W - 80, 60, 25, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  drawBackground();
+
+  ctx.save();
+  const offsetX = (W - 400)/2 - sceneOffset;
+  ctx.translate(offsetX, (H - 400)/2);
+
+  drawPlatforms();
+  drawSticks();
+  drawHero();
+
+  ctx.restore();
+}
+
+function drawBackground() {
+  ctx.beginPath();
+  ctx.moveTo(0,H);
+  ctx.lineTo(0, H - 140);
+  for(let x=0; x<=W; x+=3) {
+    const y = H - 140 + Math.sin((sceneOffset*BG_SPEED*0.3 + x)*0.008)*20;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,H);
+  ctx.fillStyle = '#2c3e50';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0,H);
+  ctx.lineTo(0, H - 90);
+  for(let x=0; x<=W; x+=2) {
+    const y = H - 90 + Math.sin((sceneOffset*BG_SPEED + x)*0.005)*15;
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(W,H);
+  ctx.fillStyle = '#34495e';
+  ctx.fill();
+
+  trees.forEach(t => {
+    const sx = (-sceneOffset * BG_SPEED + t.x);
+    const sy = H - 140 + Math.sin(t.x*0.008)*20;
+    if(sx < -100 || sx > W + 100) return;
+
+    ctx.save();
+    ctx.translate(sx, sy);
+    t.sway += 0.02;
+    ctx.rotate(Math.sin(t.sway) * 0.05);
+
+    if(t.type === 'bamboo') {
+      ctx.fillStyle = '#2d5016';
+      for(let i=0; i<3; i++) {
+        ctx.fillRect(-2 + i*2, -t.height, 3, t.height);
+      }
+      ctx.fillStyle = '#27ae60';
+      ctx.beginPath();
+      ctx.ellipse(0, -t.height, 8, 4, 0, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = '#8b4513';
+      ctx.fillRect(-3, -10, 6, 10);
+      ctx.fillStyle = '#ff69b4';
+      ctx.beginPath();
+      ctx.arc(0, -t.height/2, 12, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  });
+
+  lanterns.forEach(l => {
+    const sx = (-sceneOffset * BG_SPEED + l.x);
+    if(sx < -50 || sx > W + 50) return;
+
+    ctx.save();
+    ctx.translate(sx, l.y);
+    l.flicker += 0.1;
+    const flick = 0.7 + Math.sin(l.flicker) * 0.3;
+
+    ctx.save();
+    ctx.globalAlpha = flick * 0.5;
+    ctx.fillStyle = '#f39c12';
+    ctx.beginPath();
+    ctx.arc(0, 0, 20, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(-8, -12, 16, 24);
+    ctx.fillStyle = '#f39c12';
+    ctx.fillRect(-6, -10, 12, 20);
+    ctx.restore();
+  });
+
+  guards.forEach(g => {
+    const sx = (-sceneOffset * BG_SPEED + g.x);
+    if(sx < -50 || sx > W + 50) return;
+
+    ctx.save();
+    ctx.translate(sx, g.y);
+    ctx.fillStyle = '#2c3e50';
+    ctx.fillRect(-4, -20, 8, 20);
+    ctx.beginPath();
+    ctx.arc(0, -25, 5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillRect(-1, -35, 2, 15);
+    ctx.restore();
+  });
+}
+
+function drawPlatforms() {
+  platforms.forEach(p => {
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(p.x+4, 400-PLATFORM_H+4, p.w, PLATFORM_H + (H-400)/2);
+
+    ctx.fillStyle = '#2c3e50';
+    ctx.fillRect(p.x, 400-PLATFORM_H, p.w, PLATFORM_H + (H-400)/2);
+
+    ctx.fillStyle = '#34495e';
+    for(let i=0; i<p.w; i+=8) {
+      ctx.fillRect(p.x + i, 400-PLATFORM_H, 6, 8);
+    }
+
+    if(last(sticks).x < p.x) {
+      ctx.save();
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#f39c12';
+      ctx.fillStyle = '#f39c12';
+      ctx.fillRect(p.x + p.w/2 - PERFECT_SIZE/2, 400-PLATFORM_H, PERFECT_SIZE, PERFECT_SIZE/2);
+      ctx.restore();
+    }
+  });
+}
+
+function drawSticks() {
+  sticks.forEach(s => {
+    ctx.save();
+    ctx.translate(s.x, 400-PLATFORM_H);
+    ctx.rotate((Math.PI/180) * s.rot);
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(2,2);
+    ctx.lineTo(2,-s.length+2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(0,-s.length);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#654321';
+    ctx.lineWidth = 1;
+    for(let i=20; i<s.length; i+=20) {
+      ctx.beginPath();
+      ctx.moveTo(-3,-i);
+      ctx.lineTo(3,-i);
+      ctx.stroke();
+    }
+    ctx.restore();
+  });
+}
+
+function drawHero() {
+  ctx.save();
+  ctx.translate(heroX - HERO_W/2, heroY + 400 - PLATFORM_H - HERO_H/2);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(-HERO_W/2+3, -HERO_H/2+3, HERO_W, HERO_H-4);
+
+  ctx.fillStyle = '#2c3e50';
+  ctx.fillRect(-HERO_W/2, -HERO_H/2, HERO_W, HERO_H-4);
+
+  ctx.fillStyle = '#34495e';
+  ctx.fillRect(-HERO_W/2+2, -HERO_H/2+5, HERO_W-4, 12);
+
+  ctx.save();
+  ctx.shadowBlur = 6;
+  ctx.shadowColor = '#f39c12';
+  ctx.fillStyle = '#f39c12';
+  ctx.beginPath();
+  ctx.arc(5, -8, 2, 0, Math.PI*2);
+  ctx.arc(-5, -8, 2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = '#2c3e50';
+  ctx.beginPath();
+  ctx.arc(6, 13, 3, 0, Math.PI*2);
+  ctx.arc(-6, 13, 3, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  draw();
+});
+
+resizeCanvas();
+loadHighScore();
+document.getElementById('intro-cutscene').style.display = 'block';
+</script>
+</body>
+</html>

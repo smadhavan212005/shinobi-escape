@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
 <title>Shinobi Escape</title>
+<link rel="icon" type="image/png" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@400;600;800&display=swap" rel="stylesheet">
@@ -16,6 +17,11 @@
     overflow:hidden;
     height:100vh;
     touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
 
   #wrap {
@@ -31,6 +37,7 @@
     width:100vw;
     height:100vh;
     display:block;
+    cursor:pointer;
   }
 
   .hud {
@@ -160,6 +167,8 @@
     z-index:30;
     box-shadow:0 4px 12px rgba(0,0,0,0.6);
     transition:background 0.3s, transform 0.2s;
+    pointer-events:auto;
+    -webkit-tap-highlight-color:rgba(0,0,0,0);
   }
 
   #retry:hover { background:#aa2222; transform:translateX(-50%) scale(1.05); }
@@ -173,6 +182,7 @@
     display:none;
     z-index:100;
     color:#fff;
+    pointer-events:auto;
   }
 
   .cutscene-content {
@@ -183,6 +193,7 @@
     max-width:600px;
     padding:30px 20px;
     width:90%;
+    pointer-events:auto;
   }
 
   .cutscene h2 {
@@ -230,64 +241,143 @@
     margin:20px 10px;
     transition:background 0.3s, transform 0.2s;
     box-shadow:0 4px 12px rgba(0,0,0,0.6);
+    min-height:48px;
+    min-width:120px;
+    pointer-events:auto;
+    -webkit-tap-highlight-color:rgba(0,0,0,0);
+    touch-action:manipulation;
   }
 
   .start-btn:hover { background:#2475d0; transform:scale(1.05); }
   .start-btn:active { transform:scale(0.98); }
 
+  /* Enhanced Mobile Responsiveness */
   @media (max-width:768px) {
+    body { 
+      touch-action: manipulation; 
+      -webkit-tap-highlight-color: transparent;
+    }
+    
     #story-box {
-      left:10px; right:10px; top:10px;
-      padding:10px 14px;
+      left:8px; right:8px; top:8px;
+      padding:12px 16px;
       max-width:100%;
     }
-    #mission-title { font-size:12px; }
-    #story-desc { font-size:11px; }
+    #mission-title { font-size:13px; letter-spacing:0.5px; }
+    #story-desc { font-size:11px; line-height:1.4; }
     #score-area {
-      top:10px; right:10px;
-      padding:10px 12px;
-      min-width:120px;
+      top:8px; right:8px;
+      padding:10px 14px;
+      min-width:130px;
     }
-    #score { font-size:24px; }
-    #distance { font-size:11px; }
-    #danger { font-size:10px; }
-    #highscore { font-size:10px; }
+    #score { font-size:26px; }
+    #distance { font-size:12px; margin-top:4px; }
+    #danger { font-size:10px; margin-top:3px; }
+    #highscore { font-size:10px; margin-top:3px; }
     #controls {
-      bottom:15px;
-      font-size:11px;
-      padding:8px 16px;
-      max-width:90%;
+      bottom:20px;
+      font-size:12px;
+      padding:10px 18px;
+      max-width:85%;
       text-align:center;
     }
-    .feedback { font-size:18px; }
+    .feedback { font-size:20px; }
     #retry {
-      bottom:60px;
-      padding:12px 24px;
-      font-size:14px;
+      bottom:70px;
+      padding:16px 32px;
+      font-size:16px;
+      min-height:56px;
+      min-width:160px;
     }
     .cutscene-content {
-      padding:20px 15px;
+      padding:25px 15px;
       width:95%;
     }
-    .cutscene h2 { font-size:26px; }
-    .cutscene p { font-size:15px; }
-    .cutscene li { font-size:13px; }
+    .cutscene h2 { font-size:28px; margin-bottom:15px; }
+    .cutscene p { font-size:16px; margin:10px 0; }
+    .cutscene li { font-size:14px; margin:8px 0; }
     .start-btn {
-      padding:12px 24px;
-      font-size:15px;
-      margin:15px 5px;
+      padding:16px 32px;
+      font-size:18px;
+      margin:20px 10px;
+      min-height:56px;
+      min-width:180px;
     }
   }
 
   @media (max-width:480px) {
-    #story-box { padding:8px 12px; }
-    #mission-title { font-size:11px; }
+    #story-box { 
+      padding:10px 14px;
+      left:5px; right:5px; top:5px;
+    }
+    #mission-title { font-size:12px; }
     #story-desc { font-size:10px; }
-    #score-area { padding:8px 10px; min-width:100px; }
-    #score { font-size:20px; }
-    #controls { font-size:10px; padding:6px 12px; }
-    .cutscene h2 { font-size:22px; }
-    .cutscene p { font-size:14px; }
+    #score-area { 
+      padding:8px 12px; 
+      min-width:115px;
+      top:5px; right:5px;
+    }
+    #score { font-size:22px; }
+    #distance { font-size:11px; }
+    #danger { font-size:9px; }
+    #highscore { font-size:9px; }
+    #controls { 
+      font-size:11px; 
+      padding:8px 16px;
+      bottom:15px;
+      max-width:90%;
+    }
+    .feedback { font-size:18px; }
+    #retry {
+      bottom:60px;
+      padding:14px 28px;
+      font-size:15px;
+      min-height:52px;
+      min-width:150px;
+    }
+    .cutscene h2 { font-size:24px; }
+    .cutscene p { font-size:15px; }
+    .cutscene li { font-size:13px; }
+    .start-btn {
+      padding:14px 28px;
+      font-size:16px;
+      margin:18px 8px;
+      min-height:52px;
+      min-width:160px;
+    }
+  }
+
+  /* Landscape orientation for mobile */
+  @media (max-height:500px) and (orientation:landscape) {
+    #story-box {
+      top:5px; left:5px;
+      padding:8px 12px;
+      max-width:300px;
+    }
+    #score-area {
+      top:5px; right:5px;
+      padding:8px 12px;
+    }
+    #controls { 
+      bottom:10px;
+      font-size:10px;
+      padding:6px 14px;
+    }
+    .cutscene-content {
+      padding:15px 10px;
+      margin:5px;
+      max-height:95vh;
+      overflow-y:auto;
+    }
+    .cutscene h2 { font-size:22px; margin-bottom:10px; }
+    .cutscene p { font-size:14px; margin:6px 0; }
+    .start-btn { 
+      padding:12px 24px; 
+      font-size:15px;
+      margin:10px 8px;
+      min-height:48px;
+      min-width:140px;
+    }
   }
 </style>
 </head>
@@ -404,12 +494,23 @@ let lanterns = [];
 
 let spacePressed = false;
 let mousePressed = false;
+let touchActive = false;
 
 function resizeCanvas() {
   W = window.innerWidth;
   H = window.innerHeight;
   canvas.width = W;
   canvas.height = H;
+  
+  // High DPI support for mobile
+  const dpr = window.devicePixelRatio || 1;
+  if (dpr > 1) {
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+  }
 }
 
 function loadHighScore() {
@@ -557,7 +658,48 @@ function stopStretch(e) {
   if(phase === 'stretching') phase = 'turning';
 }
 
+// Enhanced touch controls for mobile with better event handling
+window.addEventListener('touchstart', (e) => {
+  if (e.target.closest('.start-btn') || e.target.closest('#retry')) {
+    // Let button clicks work normally
+    return;
+  }
+  e.preventDefault();
+  touchActive = true;
+  startStretch(e);
+}, {passive: false});
+
+window.addEventListener('touchend', (e) => {
+  if (e.target.closest('.start-btn') || e.target.closest('#retry')) {
+    // Let button clicks work normally
+    return;
+  }
+  e.preventDefault();
+  touchActive = false;
+  stopStretch(e);
+}, {passive: false});
+
+window.addEventListener('touchmove', (e) => {
+  if (e.target.closest('.cutscene-content')) {
+    // Allow scrolling in cutscenes
+    return;
+  }
+  e.preventDefault();
+}, {passive: false});
+
+window.addEventListener('touchcancel', (e) => {
+  e.preventDefault();
+  touchActive = false;
+  stopStretch(e);
+}, {passive: false});
+
+// Mouse events
 window.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.start-btn') || e.target.closest('#retry')) {
+    // Let button clicks work normally
+    return;
+  }
+  e.preventDefault();
   mousePressed = true;
   startStretch(e);
 });
@@ -567,16 +709,12 @@ window.addEventListener('mouseup', (e) => {
   stopStretch(e);
 });
 
-window.addEventListener('touchstart', (e) => {
+// Prevent context menu on long press
+window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  startStretch(e);
-}, {passive:false});
+});
 
-window.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  stopStretch(e);
-}, {passive:false});
-
+// Keyboard events
 window.addEventListener('keydown', (e) => {
   if(e.code === 'Space' || e.key === ' ') {
     e.preventDefault();
@@ -920,6 +1058,16 @@ window.addEventListener('resize', () => {
   resizeCanvas();
   draw();
 });
+
+// Prevent zoom on double tap
+let lastTouchEnd = 0;
+document.addEventListener('touchend', function (event) {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+        event.preventDefault();
+    }
+    lastTouchEnd = now;
+}, false);
 
 resizeCanvas();
 loadHighScore();

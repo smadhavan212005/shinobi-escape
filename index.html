@@ -16,6 +16,7 @@
     background:#0a0a0a;
     overflow:hidden;
     height:100vh;
+    height:100dvh;
     touch-action: none;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -28,6 +29,7 @@
     position:fixed;
     top:0; left:0;
     width:100vw; height:100vh;
+    height:100dvh;
     background:linear-gradient(180deg, #1a1a2e 0%, #16213e 70%, #0f3460 100%);
   }
 
@@ -36,6 +38,7 @@
     top:0; left:0;
     width:100vw;
     height:100vh;
+    height:100dvh;
     display:block;
     cursor:pointer;
   }
@@ -178,6 +181,7 @@
     position:fixed;
     top:0; left:0;
     width:100vw; height:100vh;
+    height:100dvh;
     background:rgba(0,0,0,0.95);
     display:none;
     z-index:100;
@@ -259,7 +263,7 @@
     }
     
     #story-box {
-      left:8px; right:8px; top:8px;
+      left:8px; right:150px; top:8px;
       padding:12px 16px;
       max-width:100%;
     }
@@ -308,7 +312,7 @@
   @media (max-width:480px) {
     #story-box { 
       padding:10px 14px;
-      left:5px; right:5px; top:5px;
+      left:5px; right:128px; top:5px;
     }
     #mission-title { font-size:12px; }
     #story-desc { font-size:10px; }
@@ -459,6 +463,8 @@ const WALK_RATE = 0.3;
 const TRANSITION_SPEED = 0.4;
 const FALL_SPEED = 0.5;
 const BG_SPEED = 0.12;
+const MAX_STICK = 450;
+const START_HERO_X = 108;
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -485,6 +491,7 @@ let stealthLevel = 100;
 let pursuitLevel = 0;
 let currentChapter = 0;
 let highScore = 0;
+let pendingMilestone = null;
 
 let platforms = [];
 let sticks = [];
@@ -499,30 +506,29 @@ let touchActive = false;
 function resizeCanvas() {
   W = window.innerWidth;
   H = window.innerHeight;
-  canvas.width = W;
-  canvas.height = H;
-  
-  // High DPI support for mobile
   const dpr = window.devicePixelRatio || 1;
-  if (dpr > 1) {
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
-    ctx.scale(dpr, dpr);
-  }
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function cameraX() {
+  return Math.max(60, W * 0.2) - START_HERO_X - sceneOffset;
 }
 
 function loadHighScore() {
-  const saved = localStorage.getItem('shinobi_highscore');
-  highScore = saved ? parseInt(saved) : 0;
+  let saved = null;
+  try { saved = localStorage.getItem('shinobi_highscore'); } catch (e) {}
+  highScore = parseInt(saved, 10) || 0;
   highscoreEl.textContent = `Best: ${highScore}`;
 }
 
 function saveHighScore() {
   if(score > highScore) {
     highScore = score;
-    localStorage.setItem('shinobi_highscore', highScore.toString());
+    try { localStorage.setItem('shinobi_highscore', highScore.toString()); } catch (e) {}
     highscoreEl.textContent = `Best: ${highScore}`;
   }
 }
@@ -539,7 +545,7 @@ function retryMission() {
 
 function continueMission() {
   document.getElementById('milestone-cutscene').style.display = 'none';
-  phase = 'waiting';
+  if (phase === 'story') phase = 'waiting';
 }
 
 function updateStory() {
@@ -550,11 +556,9 @@ function updateStory() {
       missionEl.textContent = `Mission: ${mission.title}`;
       storyEl.textContent = mission.desc;
 
-      if (milestone > 0 && score > 0) {
-        const milestoneText = document.getElementById('milestone-text');
-        milestoneText.innerHTML = `<p><strong>${mission.title}</strong></p><p>${mission.desc}</p><p>Distance escaped: ${distance}m | Stealth: ${Math.floor(stealthLevel)}%</p>`;
-        document.getElementById('milestone-cutscene').style.display = 'block';
-        phase = 'story';
+      if (currentChapter > 0 && score > 0) {
+        // shown once the hero has finished crossing, so the walk isn't interrupted
+        pendingMilestone = `<p><strong>${mission.title}</strong></p><p>${mission.desc}</p><p>Distance escaped: ${distance}m | Stealth: ${Math.floor(stealthLevel)}%</p>`;
       }
       break;
     }
@@ -573,6 +577,12 @@ function last(arr) { return arr[arr.length-1]; }
 function rand(a,b) { return a + Math.floor(Math.random()*(b-a+1)); }
 
 function reset() {
+  saveHighScore();
+  document.getElementById('caught-cutscene').style.display = 'none';
+  document.getElementById('milestone-cutscene').style.display = 'none';
+  pendingMilestone = null;
+  missionEl.textContent = `Mission: ${MISSIONS[0].title}`;
+  storyEl.textContent = MISSIONS[0].desc;
   phase = 'waiting';
   lastTs = 0;
   sceneOffset = 0;
@@ -594,11 +604,9 @@ function reset() {
   sticks = [{ x: platforms[0].x + platforms[0].w, length:0, rot:0 }];
 
   trees = [];
-  for(let i=0; i<10; i++) genTree();
   guards = [];
-  for(let i=0; i<5; i++) genGuard();
   lanterns = [];
-  for(let i=0; i<8; i++) genLantern();
+  ensureBackground();
 
   heroX = platforms[0].x + platforms[0].w - HERO_EDGE_DIST;
   heroY = 0;
@@ -615,7 +623,7 @@ function genPlatform() {
 }
 
 function genTree() {
-  const lastT = trees.length ? trees[trees.length-1].x : 0;
+  const lastT = trees.length ? trees[trees.length-1].x : sceneOffset * BG_SPEED;
   const gap = rand(40,130);
   trees.push({
     x: lastT + gap,
@@ -626,105 +634,116 @@ function genTree() {
 }
 
 function genGuard() {
-  const lastG = guards.length ? guards[guards.length-1].x : 200;
+  const lastG = guards.length ? guards[guards.length-1].x : sceneOffset * BG_SPEED + 200;
   const gap = rand(150,300);
   guards.push({
     x: lastG + gap,
-    y: H - 100,
     radius: rand(80,120),
     patrol: Math.random() > 0.5
   });
 }
 
 function genLantern() {
-  const lastL = lanterns.length ? lanterns[lanterns.length-1].x : 100;
+  const lastL = lanterns.length ? lanterns[lanterns.length-1].x : sceneOffset * BG_SPEED + 100;
   const gap = rand(80,150);
   lanterns.push({
     x: lastL + gap,
-    y: rand(H-200, H-120),
+    yOff: rand(120, 200),
     flicker: Math.random() * Math.PI * 2
   });
+}
+
+function ensureBackground() {
+  const left = sceneOffset * BG_SPEED - 200;
+  const right = sceneOffset * BG_SPEED + W + 300;
+  trees = trees.filter(t => t.x > left);
+  guards = guards.filter(g => g.x > left);
+  lanterns = lanterns.filter(l => l.x > left);
+  while (!trees.length || last(trees).x < right) genTree();
+  while (!guards.length || last(guards).x < right) genGuard();
+  while (!lanterns.length || last(lanterns).x < right) genLantern();
 }
 
 function startStretch(e) {
   if(phase !== 'waiting') return;
   controlsEl.style.opacity = 0;
   phase = 'stretching';
-  lastTs = undefined;
-  requestAnimationFrame(loop);
 }
 
 function stopStretch(e) {
   if(phase === 'stretching') phase = 'turning';
 }
 
-// Enhanced touch controls for mobile with better event handling
+// Input. Taps on cutscenes/buttons must keep their default behaviour (clicks, scrolling).
+function isUiTarget(e) {
+  return !!(e.target.closest && e.target.closest('.cutscene, #retry'));
+}
+
 window.addEventListener('touchstart', (e) => {
-  if (e.target.closest('.start-btn') || e.target.closest('#retry')) {
-    // Let button clicks work normally
-    return;
-  }
+  if (isUiTarget(e)) return;
   e.preventDefault();
   touchActive = true;
   startStretch(e);
 }, {passive: false});
 
-window.addEventListener('touchend', (e) => {
-  if (e.target.closest('.start-btn') || e.target.closest('#retry')) {
-    // Let button clicks work normally
-    return;
-  }
-  e.preventDefault();
+function endTouch(e) {
+  if (!isUiTarget(e)) e.preventDefault();
+  if (e.touches && e.touches.length > 0) return;
   touchActive = false;
   stopStretch(e);
-}, {passive: false});
+}
+window.addEventListener('touchend', endTouch, {passive: false});
+window.addEventListener('touchcancel', endTouch, {passive: false});
 
 window.addEventListener('touchmove', (e) => {
-  if (e.target.closest('.cutscene-content')) {
-    // Allow scrolling in cutscenes
-    return;
-  }
+  if (isUiTarget(e)) return;
   e.preventDefault();
 }, {passive: false});
 
-window.addEventListener('touchcancel', (e) => {
-  e.preventDefault();
-  touchActive = false;
-  stopStretch(e);
-}, {passive: false});
-
-// Mouse events
 window.addEventListener('mousedown', (e) => {
-  if (e.target.closest('.start-btn') || e.target.closest('#retry')) {
-    // Let button clicks work normally
-    return;
-  }
+  if (e.button !== 0 || isUiTarget(e)) return;
   e.preventDefault();
   mousePressed = true;
   startStretch(e);
 });
 
 window.addEventListener('mouseup', (e) => {
+  if (!mousePressed) return;
   mousePressed = false;
   stopStretch(e);
 });
 
-// Prevent context menu on long press
 window.addEventListener('contextmenu', (e) => {
   e.preventDefault();
 });
 
-// Keyboard events
+// Losing focus mid-hold would otherwise leave the pole stretching forever
+window.addEventListener('blur', () => {
+  spacePressed = mousePressed = touchActive = false;
+  stopStretch();
+});
+
+function visibleCutscene() {
+  return ['intro-cutscene', 'caught-cutscene', 'milestone-cutscene']
+    .find(id => document.getElementById(id).style.display === 'block');
+}
+
 window.addEventListener('keydown', (e) => {
   if(e.code === 'Space' || e.key === ' ') {
     e.preventDefault();
-    if(!spacePressed && phase === 'waiting') {
+    if(!e.repeat && !spacePressed && phase === 'waiting' && !visibleCutscene()) {
       spacePressed = true;
       startStretch(e);
     }
   }
-  if(e.key === 'Enter' || e.key === 'r' || e.key === 'R') {
+  if(e.key === 'Enter') {
     e.preventDefault();
+    const cs = visibleCutscene();
+    if(cs === 'intro-cutscene') startMission();
+    else if(cs === 'caught-cutscene') retryMission();
+    else if(cs === 'milestone-cutscene') continueMission();
+  }
+  if((e.key === 'r' || e.key === 'R') && !visibleCutscene() && phase !== 'story') {
     reset();
   }
 });
@@ -742,23 +761,23 @@ window.addEventListener('keyup', (e) => {
 retryBtn.addEventListener('click', () => reset());
 
 function loop(ts) {
+  requestAnimationFrame(loop);
   if(!lastTs) lastTs = ts;
-  const dt = ts - lastTs;
+  const dt = Math.min(50, ts - lastTs);
+  lastTs = ts;
+  const stick = last(sticks);
 
   switch(phase) {
-    case 'story':
-    case 'waiting':
-      draw(); lastTs = ts; return;
     case 'stretching':
-      last(sticks).length += dt * STRETCH_RATE * (1 + pursuitLevel * 0.001);
+      stick.length = Math.min(MAX_STICK, stick.length + dt * STRETCH_RATE * (1 + pursuitLevel * 0.001));
       break;
     case 'turning':
-      last(sticks).rot += dt * ROTATE_RATE;
-      if(last(sticks).rot >= 90) {
-        last(sticks).rot = 90;
+      stick.rot += dt * ROTATE_RATE;
+      if(stick.rot >= 90) {
+        stick.rot = 90;
         const [p, perfect] = checkHit();
         if(p) {
-          distance += Math.floor(last(sticks).length / 10);
+          distance += Math.floor(stick.length / 10);
           if(perfect) {
             score += 2;
             stealthLevel = Math.min(100, stealthLevel + 5);
@@ -769,18 +788,17 @@ function loop(ts) {
             if(stealthLevel > 70) showFeedback(stealthEl);
           }
           scoreEl.textContent = score;
-          genPlatform(); genTree(); genGuard();
-          if(Math.random() < 0.4) genLantern();
-          phase = 'walking';
+          genPlatform();
         } else {
           stealthLevel = Math.max(0, stealthLevel - 15);
           showFeedback(alertEl);
-          phase = 'falling';
         }
+        // Either way the hero walks out along the pole (and falls if it is too short)
+        phase = 'walking';
         updateStory();
       }
       break;
-    case 'walking':
+    case 'walking': {
       heroX += dt * WALK_RATE * (1 + pursuitLevel * 0.002);
       const [nextP] = checkHit();
       if(nextP) {
@@ -790,38 +808,49 @@ function loop(ts) {
           phase = 'transitioning';
         }
       } else {
-        const maxHeroX = last(sticks).x + last(sticks).length + HERO_W;
+        const maxHeroX = stick.x + stick.length + HERO_W/2;
         if(heroX >= maxHeroX) { heroX = maxHeroX; phase = 'falling'; }
       }
       break;
-    case 'transitioning':
-      sceneOffset += dt * TRANSITION_SPEED * (1 + score * 0.001);
+    }
+    case 'transitioning': {
       const [nxt] = checkHit();
-      if(nxt && sceneOffset > nxt.x + nxt.w - (W/2 - 60)) {
+      const target = nxt.x + nxt.w - HERO_EDGE_DIST - START_HERO_X;
+      sceneOffset = Math.min(target, sceneOffset + dt * TRANSITION_SPEED * (1 + score * 0.001));
+      if(sceneOffset >= target) {
         sticks.push({ x: nxt.x + nxt.w, length:0, rot:0 });
-        platforms = platforms.filter(p => p.x + p.w > sceneOffset - 100);
-        phase = 'waiting';
+        platforms = platforms.filter(pl => pl.x + pl.w > sceneOffset - 400);
+        sticks = sticks.filter((st, i) => i === sticks.length - 1 || st.x + st.length > sceneOffset - 400);
+        ensureBackground();
+        if(pendingMilestone) {
+          document.getElementById('milestone-text').innerHTML = pendingMilestone;
+          pendingMilestone = null;
+          document.getElementById('milestone-cutscene').style.display = 'block';
+          phase = 'story';
+        } else {
+          phase = 'waiting';
+        }
       }
       break;
+    }
     case 'falling':
-      if(last(sticks).rot < 180) last(sticks).rot += dt * ROTATE_RATE;
+      if(stick.rot < 180) stick.rot = Math.min(180, stick.rot + dt * ROTATE_RATE);
       heroY += dt * FALL_SPEED * (1 + heroY * 0.001);
       if(heroY > PLATFORM_H + 250) {
+        phase = 'over';
         saveHighScore();
         document.getElementById('caught-cutscene').style.display = 'block';
-        return;
       }
       break;
   }
 
   draw();
-  lastTs = ts;
-  requestAnimationFrame(loop);
 }
 
 function showFeedback(el) {
   el.style.opacity = 1;
-  setTimeout(() => el.style.opacity = 0, 800);
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.opacity = 0, 800);
 }
 
 function checkHit() {
@@ -863,8 +892,7 @@ function draw() {
   drawBackground();
 
   ctx.save();
-  const offsetX = (W - 400)/2 - sceneOffset;
-  ctx.translate(offsetX, (H - 400)/2);
+  ctx.translate(cameraX(), (H - 400)/2);
 
   drawPlatforms();
   drawSticks();
@@ -931,7 +959,7 @@ function drawBackground() {
     if(sx < -50 || sx > W + 50) return;
 
     ctx.save();
-    ctx.translate(sx, l.y);
+    ctx.translate(sx, H - l.yOff);
     l.flicker += 0.1;
     const flick = 0.7 + Math.sin(l.flicker) * 0.3;
 
@@ -955,7 +983,7 @@ function drawBackground() {
     if(sx < -50 || sx > W + 50) return;
 
     ctx.save();
-    ctx.translate(sx, g.y);
+    ctx.translate(sx, H - 100);
     ctx.fillStyle = '#2c3e50';
     ctx.fillRect(-4, -20, 8, 20);
     ctx.beginPath();
@@ -1024,7 +1052,7 @@ function drawSticks() {
 
 function drawHero() {
   ctx.save();
-  ctx.translate(heroX - HERO_W/2, heroY + 400 - PLATFORM_H - HERO_H/2);
+  ctx.translate(heroX - HERO_W/2, heroY + 400 - PLATFORM_H - HERO_H/2 + 4);
 
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.fillRect(-HERO_W/2+3, -HERO_H/2+3, HERO_W, HERO_H-4);
@@ -1059,19 +1087,11 @@ window.addEventListener('resize', () => {
   draw();
 });
 
-// Prevent zoom on double tap
-let lastTouchEnd = 0;
-document.addEventListener('touchend', function (event) {
-    const now = (new Date()).getTime();
-    if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
-    }
-    lastTouchEnd = now;
-}, false);
-
 resizeCanvas();
 loadHighScore();
+reset();
 document.getElementById('intro-cutscene').style.display = 'block';
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
